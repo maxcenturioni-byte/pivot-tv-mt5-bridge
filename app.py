@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import os
 import threading
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 lock = threading.Lock()
 latest_signal = {
