@@ -1,9 +1,8 @@
 from flask import Flask, request, jsonify
 from datetime import datetime, timezone
-import os
 import threading
 
-app = Flask(__name__)
+app = Flask(_name_)
 
 lock = threading.Lock()
 latest_signal = {
@@ -17,82 +16,36 @@ latest_signal = {
 
 @app.route("/", methods=["GET"])
 def home():
-    return jsonify({
-        "status": "online",
-        "service": "TradingView to MT5 Bridge"
-    })
+    return jsonify({"status": "online"})
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
     global latest_signal
 
-    data = request.get_json(silent=True)
+    raw_text = request.get_data(as_text=True).strip()
+    parts = [p.strip() for p in raw_text.split("|")]
 
-    if data is None:
-        raw_text = request.get_data(as_text=True).strip()
-        data = {"raw": raw_text}
+    if len(parts) < 3 or parts[0] != "PIVOT":
+        return jsonify({"ok": False, "error": "bad format", "received": raw_text}), 400
 
-    action = str(
-        data.get("action")
-        or data.get("order_action")
-        or data.get("side")
-        or ""
-    ).strip().upper()
-
-    symbol = str(
-        data.get("symbol")
-        or data.get("ticker")
-        or ""
-    ).strip().upper()
-
-    price = data.get("price", None)
-
-    # Supporto anche messaggi semplici tipo:
-    # PIVOT|BUY|XAUUSD
-    raw = str(data.get("raw", "")).strip()
-
-    if raw:
-        parts = [p.strip() for p in raw.split("|")]
-
-        if len(parts) >= 2 and not action:
-            action = parts[1].upper()
-
-        if len(parts) >= 3 and not symbol:
-            symbol = parts[2].upper()
-
-    if action in ("LONG", "BUY", "1"):
-        action = "BUY"
-    elif action in ("SHORT", "SELL", "-1"):
-        action = "SELL"
-    else:
-        return jsonify({
-            "ok": False,
-            "error": "Invalid action",
-            "received": data
-        }), 400
+    action = parts[1].upper()
+    symbol = parts[3].upper() if len(parts) > 3 else ""
+    price = parts[4] if len(parts) > 4 else ""
 
     with lock:
-        new_id = latest_signal["id"] + 1
-
         latest_signal = {
-            "id": new_id,
+            "id": latest_signal["id"] + 1,
             "action": action,
             "symbol": symbol,
             "price": price,
             "time": datetime.now(timezone.utc).isoformat(),
-            "raw": raw
+            "raw": raw_text
         }
 
-    return jsonify({
-        "ok": True,
-        "signal": latest_signal
-    })
+    return jsonify({"ok": True, "signal": latest_signal})
 
 @app.route("/signal", methods=["GET"])
 def signal():
     with lock:
         return jsonify(latest_signal)
-
-if _name_ == "_main_":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port) 
+   
