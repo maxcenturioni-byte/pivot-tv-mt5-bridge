@@ -13,7 +13,6 @@ latest_signal = {
     "time": "",
     "raw": ""
 }
-
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"status": "online"})
@@ -44,8 +43,8 @@ def webhook():
 
     return jsonify({"ok": True, "signal": latest_signal})
 
-@app.route("/signal", methods=["GET"])
-def signal():
+@app.route("/signal/<secret>", methods=["GET"])
+def signal(Secret):
     with lock:
         return jsonify(latest_signal)
    
