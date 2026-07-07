@@ -44,7 +44,7 @@ def webhook():
     return jsonify({"ok": True, "signal": latest_signal})
 
 @app.route("/signal/<secret>", methods=["GET"])
-def signal(Secret):
+def signal(secret):
     with lock:
         return jsonify(latest_signal)
    
